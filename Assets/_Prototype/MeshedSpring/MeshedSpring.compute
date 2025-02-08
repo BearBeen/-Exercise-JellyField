@@ -1,0 +1,99 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel PositionUpdate
+#pragma kernel VolumeUpdate
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+
+struct SpringMesh
+{
+	float3 position;
+	float volume;
+	float3 move;
+	float fixity;
+};
+
+RWStructuredBuffer<SpringMesh> _MeshedSpring;
+float3 _Pinch;
+float _Loss;
+float _Stiffness;
+int _XSize;
+int _YSize;
+int _ZSize;
+
+float4 unity_DeltaTime;
+
+[numthreads(8,8,1)]
+void PositionUpdate(uint3 id : SV_DispatchThreadID)
+{
+	int myIndex = id.x + id.y * _XSize + id.z * _YSize * _XSize;
+	if (myIndex >= _XSize * _YSize * _XSize)
+	{
+		return;
+	}
+	int z = (uint)myIndex / (uint)(_YSize * _XSize);
+	int y = (uint)(myIndex - z * _YSize * _XSize) / (uint)(_XSize);
+	int x = myIndex - z * _YSize * _XSize - y * _XSize;
+
+	float3 position = _MeshedSpring[myIndex].position;
+	float volume = _MeshedSpring[myIndex].volume;
+	float invertVolume = 1.0 / volume;
+
+	int leftIndex = lerp(x, x - 1, x > 0) + y * _XSize + z * _YSize * _XSize;
+	int rightIndex = lerp(x, x + 1, (int)x < _XSize - 1) + y * _XSize + z * _YSize * _XSize;
+	int forwardIndex = x + y * _XSize + lerp(z, z + 1, z < _ZSize - 1) * _YSize * _XSize;
+	int backwardIndex = x + y * _XSize + lerp(z, z - 1, z > 0) * _YSize * _XSize;
+	int upwardIndex = x + lerp(y, y + 1, y < _YSize - 1) * _XSize + z * _YSize * _XSize;
+	int downwardIndex = x + lerp(y, y - 1, y > 0) * _XSize + z * _YSize * _XSize;
+
+	float3 toLeft = (invertVolume - 1.0 / lerp(_MeshedSpring[leftIndex].volume, 1, leftIndex == myIndex)) * float3(-1, 0, 0);
+	float3 toRight = (invertVolume - 1.0 / lerp(_MeshedSpring[rightIndex].volume, 1, rightIndex == myIndex)) * float3(1, 0, 0);
+	float3 toForward = (invertVolume - 1.0 / lerp(_MeshedSpring[forwardIndex].volume, 1, forwardIndex == myIndex)) * float3(0, 0, 1);
+	float3 toBackward = (invertVolume - 1.0 / lerp(_MeshedSpring[backwardIndex].volume, 1, backwardIndex == myIndex)) * float3(0, 0, -1);
+	float3 toUpward = (invertVolume - 1.0 / lerp(_MeshedSpring[upwardIndex].volume, 1, upwardIndex == myIndex)) * float3(0, 1, 0);
+	float3 toDownward = (invertVolume - 1.0 / lerp(_MeshedSpring[downwardIndex].volume, 1, downwardIndex == myIndex)) * float3(0, -1, 0);
+	
+	float3 move = _MeshedSpring[myIndex].move;
+	float fixity = _MeshedSpring[myIndex].fixity;	
+
+	position += (1 - fixity) * _Pinch;
+	move *= (1 - _Loss);
+	move -= unity_DeltaTime.x * _Stiffness * position;
+	move += unity_DeltaTime.x * 30.0 * (toLeft + toRight + toForward + toBackward + toUpward + toDownward);
+	position += move;
+
+	_MeshedSpring[myIndex].position = position;
+	_MeshedSpring[myIndex].move = move;
+}
+
+[numthreads(8, 8, 1)]
+void VolumeUpdate(uint3 id : SV_DispatchThreadID)
+{
+	int myIndex = id.x + id.y * _XSize + id.z * _YSize * _XSize;
+	if (myIndex >= _XSize * _YSize * _XSize)
+	{
+		return;
+	}
+	int z = (uint)myIndex / (uint)(_YSize * _XSize);
+	int y = (uint)(myIndex - z * _YSize * _XSize) / (uint)(_XSize);
+	int x = myIndex - z * _YSize * _XSize - y * _XSize;
+
+	float3 position = _MeshedSpring[myIndex].position;
+
+	int leftIndex = lerp(x, x - 1, x > 0) + y * _XSize + z * _YSize * _XSize;
+	int rightIndex = lerp(x, x + 1, x < _XSize - 1) + y * _XSize + z * _YSize * _XSize;
+	int forwardIndex = x + y * _XSize + lerp(z, z + 1, z < _ZSize - 1) * _YSize * _XSize;
+	int backwardIndex = x + y * _XSize + lerp(z, z - 1, z > 0) * _YSize * _XSize;
+	int upwardIndex = x + lerp(y, y + 1, y < _YSize - 1) * _XSize + z * _YSize * _XSize;
+	int downwardIndex = x + lerp(y, y - 1, y > 0) * _XSize + z * _YSize * _XSize;
+
+	float leftSize = (position.x - _MeshedSpring[leftIndex].position.x) * 0.5 + 0.5;
+	float rightSize = (_MeshedSpring[rightIndex].position.x - position.x) * 0.5 + 0.5;
+	float forwardSize = (_MeshedSpring[forwardIndex].position.z - position.z) * 0.5 + 0.5;
+	float backwardSize = (position.z - _MeshedSpring[backwardIndex].position.z) * 0.5 + 0.5;
+	float upSize = (_MeshedSpring[upwardIndex].position.y - position.y) * 0.5 + 0.5;
+	float downSize = (position.y - _MeshedSpring[downwardIndex].position.y) * 0.5 + 0.5;
+
+	_MeshedSpring[myIndex].volume = (leftSize + rightSize) * (forwardSize + backwardSize) * (upSize + downSize);
+	_MeshedSpring[myIndex].volume = max(0.2, _MeshedSpring[myIndex].volume);
+}

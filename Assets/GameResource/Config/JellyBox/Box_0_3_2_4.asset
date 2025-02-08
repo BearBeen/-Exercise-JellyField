@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04c39f809d89a284aa7fced0d5cf4378, type: 3}
+  m_Name: Box_0_3_2_4
+  m_EditorClassIdentifier: 
+  Jellies:
+  - Layout: 0
+    Index: 0
+  - Layout: 1
+    Index: 3
+  - Layout: 2
+    Index: 2
+  - Layout: 3
+    Index: 4
