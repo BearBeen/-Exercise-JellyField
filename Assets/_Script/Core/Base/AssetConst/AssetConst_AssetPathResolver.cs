@@ -1,24 +1,21 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using System.Runtime.CompilerServices;
 
 public static partial class AssetConst
 {
     private static readonly string _normalizedRsFolder = NormalizeToUnityPath(AssetConst.ForwardSlash + AssetConst.BuiltInAssetRoot + AssetConst.ForwardSlash);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string CreatPath(params string[] subpaths)
     {
-        //if (subpaths.Length == 0)
-        //{
-        //    return string.Empty;
-        //}
         return string.Join(ForwardSlash, subpaths);
     }
 
-    private class PathCache
+    private struct PathCache
     {
-        private string _assetBundlePath = null;
-        private string _builtInAssetPath = null;
+        private string _assetBundlePath;
+        private string _builtInAssetPath;
         public PathCache(string resPath, string assetBundlePath, string builtInAssetPath)
         {
             _assetBundlePath = assetBundlePath;
@@ -54,15 +51,13 @@ public static partial class AssetConst
         }
         else
         {
-            //string extension = "";
             int indexOfRsFolder = resPath.LastIndexOf(_normalizedRsFolder);
             if (indexOfRsFolder >= 0)
             {
                 builtInAssetPath = resPath.Substring(indexOfRsFolder + _normalizedRsFolder.Length);
-                int extensionSeparatorIndex = builtInAssetPath.LastIndexOf(AssetConst.ExtensionSeparator);
+                int extensionSeparatorIndex = builtInAssetPath.LastIndexOf('.');
                 if (extensionSeparatorIndex > 0)
                 {
-                    //extension = builtInAssetPath.Substring(extensionSeparatorIndex + 1, builtInAssetPath.Length - 1 - extensionSeparatorIndex);
                     builtInAssetPath = builtInAssetPath.Substring(0, extensionSeparatorIndex);
                 }
                 else

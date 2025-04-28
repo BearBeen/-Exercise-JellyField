@@ -1,15 +1,19 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using TMPro;
 using UnityEngine;
 
-public class GameBoardManager : MonoSingleton<GameBoardManager>
+public partial class GameBoardManager : MonoSingleton<GameBoardManager>
 {
     public const float BOX_SIZE = 2f;
     public const float JELLY_SCALE = 0.9f;
-    public const float JELLY_DEAD_TIME = 0.15f;
+    public const float JELLY_ACTION_DELAY = 0.1f;
+    public const float JELLY_DEAD_TIME = 0.2f;
+    public const float JELLY_EXPAND_TIME = 0.2f;
     private const float SPACING = 1.2f;
-    private static readonly WaitForSeconds WAIT_JELLY_DEAD = new WaitForSeconds(JELLY_DEAD_TIME);
 
     [SerializeField] List<LevelConfig> _levels;
     [SerializeField] JellyBox _boxPrototype;
@@ -38,20 +42,31 @@ public class GameBoardManager : MonoSingleton<GameBoardManager>
 
     public float xCenterOffset => (_xSize - 1) * 0.5f;
     public float yCenterOffset => (_ySize - 1) * 0.5f;
+    public int xSize => _xSize;
+    public int ySize => _ySize;
     public Transform poolRoot => _poolRoot;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Vector3 BoardIndexToPosition(int x, int y)
     {
         return BOX_SIZE * SPACING * new Vector3(x - Instance.xCenterOffset, 0, y - Instance.yCenterOffset);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void PositionToBoardIndex(Vector3 position, out int x, out int y)
     {
         x = Mathf.RoundToInt((position.x / SPACING / BOX_SIZE) + Instance.xCenterOffset);
         y = Mathf.RoundToInt((position.z / SPACING / BOX_SIZE) + Instance.yCenterOffset);
     }
 
-    public override void Init()
+    //TODO: make a specific logic for this
+
+    //Refactoring config. Need a better way to config this.
+    //Base logic: every level have 1 palette. this is where all playable jelly on that level being config.
+    //Each box contains some jelly index. those index point to the config.
+    //well. maybe a gg work sheet + 1 import mechanic is okie then
+
+    private void Start()
     {
         if (PlayerPrefs.HasKey(AssetConst.KEY_GAMEBOARDMANAGER_LVLINDEX))
         {
@@ -63,9 +78,11 @@ public class GameBoardManager : MonoSingleton<GameBoardManager>
         }
         _jellyBoxPool = new Pool<JellyBox>(() => Instantiate(_boxPrototype.gameObject).GetComponent<JellyBox>());
         _jellyPools = new Dictionary<int, Pool<Jelly>>();
-        _boxDraggers = new List<BoxDragger>(2);
-        _boxDraggers.Add(Instantiate(_boxDraggerPrototype.gameObject).GetComponent<BoxDragger>());
-        _boxDraggers.Add(Instantiate(_boxDraggerPrototype.gameObject).GetComponent<BoxDragger>());
+        _boxDraggers = new List<BoxDragger>(2)
+        {
+            Instantiate(_boxDraggerPrototype.gameObject).GetComponent<BoxDragger>(),
+            Instantiate(_boxDraggerPrototype.gameObject).GetComponent<BoxDragger>()
+        };
         _boxDraggers[0].transform.parent = _draggerAnchor0;
         _boxDraggers[0].InitBoxDragger(0);
         _boxDraggers[1].transform.parent = _draggerAnchor1;
@@ -130,7 +147,7 @@ public class GameBoardManager : MonoSingleton<GameBoardManager>
             {
                 _changeBoxes.Add(new Vector2Int(x, y - 1));
             }
-            StartCoroutine(CheckChange());
+            CheckChange();
         }
         _dropIndicator.gameObject.SetActive(false);
     }
@@ -138,7 +155,7 @@ public class GameBoardManager : MonoSingleton<GameBoardManager>
     public void MakeGoal(int index)
     {
         Goal goal;
-        for (int i = 0, length = _goals.Count; i< length; i++)
+        for (int i = 0, length = _goals.Count; i < length; i++)
         {
             goal = _goals[i];
             if (goal.Index == index)
@@ -161,7 +178,7 @@ public class GameBoardManager : MonoSingleton<GameBoardManager>
             }
         }
     }
-        
+
     public void InitGameBoard()
     {
         //clear old data
@@ -226,7 +243,7 @@ public class GameBoardManager : MonoSingleton<GameBoardManager>
             if (_goalUIs.Count > levelConfig.Goals.Count)
             {
                 GoalUI goalUI = _goalUIs[_goalUIs.Count - 1];
-                _goalUIs.RemoveAt(_goalUIs.Count -1);
+                _goalUIs.RemoveAt(_goalUIs.Count - 1);
                 DestroyImmediate(goalUI.gameObject);
             }
             else
@@ -252,9 +269,14 @@ public class GameBoardManager : MonoSingleton<GameBoardManager>
         JellyConfig jellyConfig;
         for (int i = 0, length = boxConfig.Jellies.Count; i < length; i++)
         {
+            //TODO: make it work. this just a prototype for skill
             jellyConfig = boxConfig.Jellies[i];
             newJelly = _jellyPools[jellyConfig.Index].Get();
-            newJelly.InitJelly(jellyConfig.Layout, jellyConfig.Index);
+            //MissileSkillInstance skillInstance = SkillManager.Instance.GetSkillInstance<MissileSkillData, MissileSkillInstance>();
+            //SlashSkillInstance skillInstance = SkillManager.Instance.GetSkillInstance<SlashSkillData, SlashSkillInstance>();
+            //BombSkillInstance skillInstance = SkillManager.Instance.GetSkillInstance<BombSkillData, BombSkillInstance>();
+            //skillInstance.Init(newJelly, jellyConfig.Index);
+            newJelly.InitJelly(jellyConfig.Layout, jellyConfig.Index, null);
             result.Add(newJelly);
         }
         return result;
@@ -269,9 +291,9 @@ public class GameBoardManager : MonoSingleton<GameBoardManager>
         _turnIndex = (_turnIndex + 1) % levelConfig.Turns.Count;
     }
 
-    private IEnumerator CheckChange()
+    private void CheckChange()
     {
-        int comboCount = 0;
+        float delay = 0;
         int x, y;
         JellyBox left, right, top, bottom;
         List<Vector2Int> cache;
@@ -285,7 +307,7 @@ public class GameBoardManager : MonoSingleton<GameBoardManager>
             {
                 x = cache[i].x;
                 y = cache[i].y;
-                
+
                 if (check.Contains(x + y * _xSize))
                 {
                     continue;
@@ -320,29 +342,37 @@ public class GameBoardManager : MonoSingleton<GameBoardManager>
             }
             for (int i = 0, length = cache.Count; i < length; i++)
             {
-                _jellyBoxes[cache[i].x][cache[i].y].ExpandJellies();
-            }
-            yield return WAIT_JELLY_DEAD;
-            for (int i = 0, length = cache.Count; i < length; i++)
-            {
                 _jellyBoxes[cache[i].x][cache[i].y].ClearDead();
             }
-            comboCount = _changeBoxes.Count != 0 ? comboCount + 1 : comboCount;
+            delay += JELLY_DEAD_TIME + JELLY_ACTION_DELAY * 2;
+            for (int i = 0, length = cache.Count; i < length; i++)
+            {
+                _jellyBoxes[cache[i].x][cache[i].y].ExpandJellies(delay);
+            }
+            delay += JELLY_EXPAND_TIME;
         }
 
         //check losing
-        for (x = 0; x < _xSize; x++)
+        if (CountEmptyBox() <= 0)
         {
-            for (y = 0; y < _ySize; y++)
+            ToLosing();
+        }
+    }
+
+    private int CountEmptyBox()
+    {
+        int count = 0;
+        for (int x = 0; x < _xSize; x++)
+        {
+            for (int y = 0; y < _ySize; y++)
             {
                 if (_jellyBoxes[x][y] != null && _jellyBoxes[x][y].jellyCount == 0)
                 {
-                    yield break;
+                    count++;
                 }
             }
         }
-        //lose
-        ToLosing();
+        return count;
     }
 
     public void ToPlaying()
@@ -368,6 +398,47 @@ public class GameBoardManager : MonoSingleton<GameBoardManager>
     {
         _win.gameObject.SetActive(_win == show);
         _lose.gameObject.SetActive(_lose == show);
+    }
+
+    public void FindAllJellies(int paletteIndex, int x, int y, int xExpand, int yExpand, bool isIncludeCenter, ref List<Jelly> jellies)
+    {
+        xExpand = Mathf.Max(0, xExpand);
+        yExpand = Mathf.Max(yExpand);
+        int startX = Mathf.Max(0, x - xExpand);
+        int endX = Mathf.Min(_xSize - 1, x + xExpand);
+        int startY = Mathf.Max(0, y - yExpand);
+        int endY = Mathf.Min(_ySize - 1, y + yExpand);
+        for (int xIndex = startX; xIndex <= endX; xIndex++)
+        {
+            for (int yIndex = startY; yIndex <= endY; yIndex++)
+            {
+                JellyBox jellyBox = _jellyBoxes[xIndex][yIndex];
+                if (jellyBox == null || (!isIncludeCenter && xIndex == x && yIndex == y)) continue;
+                jellyBox.FindJelly(paletteIndex, ref jellies);
+            }
+        }
+    }
+
+    public void KillJelly(int paletteIndex, int x, int y, int xExpand, int yExpand)
+    {
+        xExpand = Mathf.Max(0, xExpand);
+        yExpand = Mathf.Max(yExpand);
+        if (x + xExpand < 0 || x - xExpand > _xSize - 1 || y + yExpand < 0 || y - yExpand > _ySize - 1) return;
+        int startX = Mathf.Max(0, x - xExpand);
+        int endX = Mathf.Min(_xSize - 1, x + xExpand);
+        int startY = Mathf.Max(0, y - yExpand);
+        int endY = Mathf.Min(_ySize - 1, y + yExpand);
+        for (int xIndex = startX; xIndex <= endX; xIndex++)
+        {
+            for (int yIndex = startY; yIndex <= endY; yIndex++)
+            {
+                JellyBox jellyBox = _jellyBoxes[xIndex][yIndex];
+                if (jellyBox != null)
+                {
+                    jellyBox.KillJelly(paletteIndex);
+                }
+            }
+        }
     }
 }
 

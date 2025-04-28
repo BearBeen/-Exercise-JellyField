@@ -1,32 +1,40 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PoolableGameObject : IPoolable
 {
+    protected bool _isReady = false;
+    protected bool _isRecycled = true;
     protected string _loadingPath;
     protected GameObject _gameObject;
+    protected Action<PoolableGameObject> _onLoadCallback;
     protected List<PoolableGameObject> _child = new List<PoolableGameObject>();
 
-    public string loadingPath
-    {
-        get
-        {
-            return _loadingPath;
-        }
-    }
+    public string loadingPath => _loadingPath;
+    public GameObject gameObject => _gameObject;
+    public bool isReady => _isReady;
 
-    public GameObject gameObject
-    {
-        get
-        {
-            return _gameObject;
-        }
-    }
-
-    public PoolableGameObject(string loadingPath, GameObject gameObject)
+    //Do i need immediate load mode?
+    public PoolableGameObject(string loadingPath)
     {
         _loadingPath = loadingPath;
-        _gameObject = gameObject;
+        _isReady = false;
+        _gameObject = null;
+        _onLoadCallback = null;
+        AssetManager.Instance.LoadAssetAsync(loadingPath, OnAssetLoaded);
+    }
+
+    public void AddLoadCallback(Action<PoolableGameObject> onLoadCallback)
+    {
+        if (_isReady)
+        {
+            onLoadCallback(this);
+        }
+        else
+        {
+            _onLoadCallback += onLoadCallback;
+        }
     }
 
     public void AddPoolableChild(PoolableGameObject poolableGameObject)
@@ -44,16 +52,19 @@ public class PoolableGameObject : IPoolable
 
     public virtual void Destroy()
     {
-        Object.Destroy(_gameObject);
+        UnityEngine.Object.Destroy(_gameObject);
     }
 
-    public virtual void OnEnabled()
+    public virtual void OnGetFomPool()
     {
+        _isRecycled = false;
     }
 
-    public virtual void OnDisabled()
-    {        
+    public virtual void OnReturnToPool()
+    {
         ResourceManager.Instance.ResetGameObject(this);
+        _isRecycled = true;
+        _onLoadCallback = null;
         if (_gameObject)
         {
             for (int i = 0, length = _child.Count; i < length; i++)
@@ -73,5 +84,24 @@ public class PoolableGameObject : IPoolable
     public virtual void Recycle()
     {
         ResourceManager.Instance.RecycleGameObject(this);
+    }
+
+    protected virtual void OnGameObjectCreated()
+    {
+        _onLoadCallback?.Invoke(this);
+    }
+
+    private void OnAssetLoaded(UnityEngine.Object unityObject)
+    {
+        if (unityObject is GameObject gameObject)
+        {
+            _isReady = true;
+            _gameObject = UnityEngine.Object.Instantiate(gameObject);
+            OnGameObjectCreated();
+        }
+        else
+        {
+            DebugManager.Instance.LogError($"Load GameObject failed as path: {_loadingPath}");
+        }
     }
 }

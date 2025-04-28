@@ -7,11 +7,11 @@
     /// <summary>
     /// Enabled after get from pool
     /// </summary>
-    void OnEnabled();
+    void OnGetFomPool();
     /// <summary>
     /// Disabled after return to pool
     /// </summary>
-    void OnDisabled();
+    void OnReturnToPool();
     /// <summary>
     /// Return to pool, can be resuse
     /// </summary>

@@ -2,15 +2,15 @@ Shader "Custom/JellyShader"
 {
     Properties
     {
-        _Color ("Color", Color) = (1,1,1,1)
+        _Color ("Color", Color) = (1, 1, 1, 1)
         _MainTex ("Albedo (RGB)", 2D) = "white" {}
-        _Glossiness ("Smoothness", Range(0,1)) = 0.5
-        _Metallic ("Metallic", Range(0,1)) = 0.0
-		_JellyMove("JellyMove", Vector) = (0, 0, 0, 0)
+        _Glossiness ("Smoothness", Range(0, 1)) = 0.5
+        _Metallic ("Metallic", Range(0, 1)) = 0.0
+        _JellyMove("JellyMove", Vector) = (0, 0, 0, 0)
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType" = "Opaque" }
         LOD 200
 
         CGPROGRAM
@@ -31,24 +31,24 @@ Shader "Custom/JellyShader"
         half _Metallic;
         fixed4 _Color;
 
-		struct SpringMesh
-		{
-			float3 position;
-			float volume;
-			float3 move;
-			float fixity;
-		};
+        struct SpringMesh
+        {
+            float3 position;
+            float volume;
+            float3 move;
+            float fixity;
+        };
 
-#ifdef SHADER_API_D3D11
-		RWStructuredBuffer<SpringMesh> _MeshedSpring;
-#endif
+        #ifdef SHADER_API_D3D11
+        RWStructuredBuffer<SpringMesh> _MeshedSpring;
+        #endif
 
         // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
-        // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
+        // See https : //docs.unity3d.com / Manual / GPUInstancing.html for more information about instancing.
         // #pragma instancing_options assumeuniformscaling
         UNITY_INSTANCING_BUFFER_START(Props)
-            // put more per-instance properties here
-		UNITY_DEFINE_INSTANCED_PROP(float4, _JellyMove)
+        // put more per - instance properties here
+        UNITY_DEFINE_INSTANCED_PROP(float4, _JellyMove)
         UNITY_INSTANCING_BUFFER_END(Props)
 
         void surf (Input IN, inout SurfaceOutputStandard o)
@@ -62,10 +62,12 @@ Shader "Custom/JellyShader"
             o.Alpha = c.a;
         }
 
-		void vert(inout appdata_full v, out Input o) {
-			v.vertex = v.vertex + (v.vertex.y + 0.5f) * mul(unity_WorldToObject, UNITY_ACCESS_INSTANCED_PROP(Props, _JellyMove));
-			UNITY_INITIALIZE_OUTPUT(Input, o);
-		}
+        void vert(inout appdata_full v, out Input o) {
+            float4 jellyMovement = (v.vertex.y + 0.5f) * mul(unity_WorldToObject, UNITY_ACCESS_INSTANCED_PROP(Props, _JellyMove));
+            jellyMovement.y = jellyMovement.y + (v.vertex.x * jellyMovement.x + v.vertex.z * jellyMovement.z) * 0.3;
+            v.vertex = v.vertex + jellyMovement;
+            UNITY_INITIALIZE_OUTPUT(Input, o);
+        }
         ENDCG
     }
     FallBack "Diffuse"

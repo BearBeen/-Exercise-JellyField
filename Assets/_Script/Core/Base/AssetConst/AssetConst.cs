@@ -18,7 +18,6 @@ public static partial class AssetConst
     public static readonly string ConfigExt = ".asset";
     public static readonly string ForwardSlash = "/";//unity prefer this slash
     public static readonly string BackSlash = "\\";//window's file system slash
-    public static readonly string ExtensionSeparator = ".";
     public static readonly string AssetBundleExtensionSeparator = "_";
     #endregion
     #region PATH

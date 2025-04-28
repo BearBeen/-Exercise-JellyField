@@ -1963,6 +1963,7 @@ GameObject:
   - component: {fileID: 1878985916}
   - component: {fileID: 1878985915}
   - component: {fileID: 1878985917}
+  - component: {fileID: 1878985918}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -2028,6 +2029,36 @@ MonoBehaviour:
   _poolRoot: {fileID: 1506529612}
   _draggerAnchor0: {fileID: 7198376}
   _draggerAnchor1: {fileID: 1306855950}
+  _gameDifficulty:
+    turnToGenerate: 0
+    boxPerGenerate: 2
+    totalIndicesCount: 5
+    minIndicesPerBox: 1
+--- !u!114 &1878985918
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1878985914}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa9f87590734497439d025ca0156b5f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _skillDatas:
+  - {fileID: 11400000, guid: cba873d42935c5d47a1f76d62e9e6bb1, type: 2}
+  - {fileID: 11400000, guid: 3851f37674b0b434fbd2a5cc9de9f84e, type: 2}
+  - {fileID: 11400000, guid: 79fbe0450f523bf4fbadf35787a1dc05, type: 2}
+  _upgrades:
+  - rid: 3903727375466102790
+  references:
+    version: 2
+    RefIds:
+    - rid: 3903727375466102790
+      type: {class: AllColorButHalfRangeUpgrade, ns: , asm: Assembly-CSharp}
+      data:
+        _mul: 0.5
 --- !u!1 &1938984611
 GameObject:
   m_ObjectHideFlags: 0

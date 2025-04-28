@@ -55,7 +55,7 @@ public abstract class MonoSingleton<T> : MonoBehaviour where T : MonoSingleton<T
 
     // If no other monobehaviour request the instance in an awake function
     // executing before this one, no need to search the object.
-    private void Awake()
+    protected void Awake()
     {
         if (m_Instance == null)
         {

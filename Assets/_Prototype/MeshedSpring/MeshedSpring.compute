@@ -1,9 +1,5 @@
-// Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel PositionUpdate
 #pragma kernel VolumeUpdate
-
-// Create a RenderTexture with enableRandomWrite flag and set it
-// with cs.SetTexture
 
 struct SpringMesh
 {
@@ -77,9 +73,9 @@ void VolumeUpdate(uint3 id : SV_DispatchThreadID)
 	int z = (uint)myIndex / (uint)(_YSize * _XSize);
 	int y = (uint)(myIndex - z * _YSize * _XSize) / (uint)(_XSize);
 	int x = myIndex - z * _YSize * _XSize - y * _XSize;
-
+	
 	float3 position = _MeshedSpring[myIndex].position;
-
+	
 	int leftIndex = lerp(x, x - 1, x > 0) + y * _XSize + z * _YSize * _XSize;
 	int rightIndex = lerp(x, x + 1, x < _XSize - 1) + y * _XSize + z * _YSize * _XSize;
 	int forwardIndex = x + y * _XSize + lerp(z, z + 1, z < _ZSize - 1) * _YSize * _XSize;
@@ -93,7 +89,7 @@ void VolumeUpdate(uint3 id : SV_DispatchThreadID)
 	float backwardSize = (position.z - _MeshedSpring[backwardIndex].position.z) * 0.5 + 0.5;
 	float upSize = (_MeshedSpring[upwardIndex].position.y - position.y) * 0.5 + 0.5;
 	float downSize = (position.y - _MeshedSpring[downwardIndex].position.y) * 0.5 + 0.5;
-
+	
 	_MeshedSpring[myIndex].volume = (leftSize + rightSize) * (forwardSize + backwardSize) * (upSize + downSize);
 	_MeshedSpring[myIndex].volume = max(0.2, _MeshedSpring[myIndex].volume);
 }

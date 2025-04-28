@@ -36,11 +36,11 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 613df9e728a58744481d596e0841bf69, type: 2}
     - {fileID: 0}
   Palette:
-  - {fileID: 8078502052990657031, guid: cb0855f0c20a30a479f388211d5d5aac, type: 3}
-  - {fileID: 3515824784942054588, guid: 6850803fb66ea58468027f063b778a2b, type: 3}
-  - {fileID: 787327367844393329, guid: 56ee193203802c24c81b9c405f564e7e, type: 3}
-  - {fileID: 1112001134918816270, guid: 8b1ae0cc59247b74cb020d1b99e04925, type: 3}
-  - {fileID: 1112001134918816270, guid: be4cde41814f6014c88af89cb0c3ac8b, type: 3}
+  - {fileID: 5631911727731574580, guid: 1266cfd408666ac4ba17f0b4ba380bda, type: 3}
+  - {fileID: 8172826901259682198, guid: 60c2361da5013724f9f3a606c52e7325, type: 3}
+  - {fileID: 5242168223111963293, guid: e952aeff181580f4d9feff303beb52df, type: 3}
+  - {fileID: 6067798019505041799, guid: 66ddf979be056604ab563bcd4ca0996a, type: 3}
+  - {fileID: 3882694961915047964, guid: ce0fd97187f9c9d4098142ad45728b44, type: 3}
   Goals:
   - Index: 1
     Count: 4

@@ -19,6 +19,7 @@ public class MeshedSpring : MonoBehaviour
     [SerializeField] private ComputeShader _computeShader;
     [SerializeField] private float _stiffness;
     [SerializeField] private float _loss;
+    [SerializeField] private Material _mat;
     private SpringMesh[] _data;
     private ComputeBuffer _dataBuffer;
     private Vector3 _kernalThreadGroupSize;
@@ -73,6 +74,8 @@ public class MeshedSpring : MonoBehaviour
             _reviews[i] = GameObject.CreatePrimitive(PrimitiveType.Cube);
             _reviews[i].transform.parent = transform;
         }
+        //push buffer to material
+        _mat.SetBuffer(AssetConst.SHADERPROP_MESHED_SPRING, _dataBuffer);
     }
 
     void Update()

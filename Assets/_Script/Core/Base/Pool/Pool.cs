@@ -67,7 +67,7 @@ public class Pool<T> where T : class, IPoolable
         {
             result = _instanceCreator();
         }
-        result.OnEnabled();
+        result.OnGetFomPool();
         _inUse++;
         if (_pool.Count < _designCapacity) //if we don't exhauting the pool, there is free space to release
         {
@@ -84,7 +84,7 @@ public class Pool<T> where T : class, IPoolable
         //}
         //else
         {
-            instance.OnDisabled();
+            instance.OnReturnToPool();
             _pool.Add(instance);
         }
         _inUse = _inUse <= 0 ? 0 : _inUse - 1;
@@ -101,7 +101,6 @@ public class Pool<T> where T : class, IPoolable
             _timeFromLastUse = Time.time - _lastUseTime;
             if (_timeFromLastUse > _hardClearDelay)
             {
-                Debug.LogError($"{_timeFromLastUse} {_hardClearDelay}");
                 for (int i = 0; i < _pool.Count; i++)
                 {
                     _pool[i].Destroy();

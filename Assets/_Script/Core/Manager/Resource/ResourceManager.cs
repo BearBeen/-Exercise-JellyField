@@ -37,52 +37,31 @@ public class ResourceManager : MonoSingleton<ResourceManager>
     /// <typeparam name="T"></typeparam>
     /// <param name="resPath"></param>
     /// <param name="completedCallback"></param>
-    public void GetGameObjectAsync<T>(string resPath, Action<T> completedCallback = null) where T : PoolableGameObject
+    public T GetGameObjectAsync<T>(string resPath) where T : PoolableGameObject
     {
-        if (_gameobjectPools.TryGetValue(resPath, out Pool<PoolableGameObject> pool))
+        if (!_gameobjectPools.TryGetValue(resPath, out Pool<PoolableGameObject> pool))
         {
-            completedCallback(pool.Get() as T);
-        }
-        else
-        {
-            //problem: 1 gameobject may need many frames to completely load. many async load request can be submit in loading time.
-            //resolution: re-check pool existence on load callback.
-            AssetManager.Instance.LoadAssetAsync(resPath, (unityObject) =>
+            Type type = typeof(T);
+            if (type == typeof(PoolableGameObject))
             {
-                if (_gameobjectPools.TryGetValue(resPath, out Pool<PoolableGameObject> justLoadedPool))
-                {
-                    completedCallback(justLoadedPool.Get() as T);
-                }
-                else if (unityObject != null)
-                {
-                    pool = new Pool<PoolableGameObject>(() =>
-                    {
-                        Type type = typeof(T);
-                        if (type == typeof(PoolableEffect))
-                        {
-                            return new PoolableEffect(resPath, Object.Instantiate(unityObject) as GameObject);
-                        }
-                        else if (type == typeof(PoolableGameObject))
-                        {
-                            return new PoolableGameObject(resPath, Object.Instantiate(unityObject) as GameObject);
-                        }
-                        else
-                        {
-                            DebugManager.Instance.LogError($"Un supoprt poolable type {type}. Don't you forget to adding it to GetGameObjectAsync function");
-                            return null;
-                        }
-                    },
-                        64);
-                    _gameobjectPools.Add(resPath, pool);
-                    completedCallback(pool.Get() as T);
-                }
-                else
-                {
-                    DebugManager.Instance.LogError($"Load GameObject failed as path: {resPath}");
-                    completedCallback(null);
-                }
-            });
+                pool = new Pool<PoolableGameObject>(() => new PoolableGameObject(resPath));
+            }
+            else if (type == typeof(PoolableParticle))
+            {
+                pool = new Pool<PoolableGameObject>(() => new PoolableParticle(resPath));
+            }
+            else if (type == typeof(PoolableAnimatedObject))
+            {
+                pool = new Pool<PoolableGameObject>(() => new PoolableAnimatedObject(resPath));
+            }
+            else
+            {
+                DebugManager.Instance.LogError($"Un supoprt poolable type {type}. Don't you forget to adding it to GetGameObjectAsync function");
+                return null;
+            }
+            _gameobjectPools.Add(resPath, pool);
         }
+        return pool.Get() as T;
     }
 
     public void ResetGameObject(PoolableGameObject poolableGameObject)

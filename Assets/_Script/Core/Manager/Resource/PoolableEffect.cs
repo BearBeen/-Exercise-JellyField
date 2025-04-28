@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public class PoolableEffect : PoolableGameObject
+public class PoolableParticle : PoolableGameObject
 {
     private ParticleSystem _rootParticle;
     private ParticleSystem.MainModule _mainModule;
@@ -17,7 +17,11 @@ public class PoolableEffect : PoolableGameObject
         }
     }
 
-    public PoolableEffect(string loadingPath, GameObject gameObject) : base(loadingPath, gameObject)
+    public PoolableParticle(string loadingPath) : base(loadingPath)
+    {
+    }
+
+    protected override void OnGameObjectCreated()
     {
         _rootParticle = _gameObject.GetComponent<ParticleSystem>();
         if (_rootParticle == null)
@@ -27,12 +31,13 @@ public class PoolableEffect : PoolableGameObject
         }
         _mainModule = _rootParticle.main;
         StopEffect();
+        base.OnGameObjectCreated();
     }
 
-    public override void OnDisabled()
+    public override void OnReturnToPool()
     {
         StopEffect();
-        base.OnDisabled();
+        base.OnReturnToPool();
     }
 
     public void StopEffect()

@@ -1,5 +1,8 @@
-using UnityEngine;
+using System.Collections.Generic;
+
 using DG.Tweening;
+
+using UnityEngine;
 
 public enum JellyLayout
 {
@@ -15,11 +18,13 @@ public enum JellyLayout
     Center,
 }
 
+//TODO: Try seperate Jelly from MonoBehaviour.
+//Make it more configurable and poolable.
 public class Jelly : MonoBehaviour, IPoolable
 {
     private static readonly Vector3 DEAD_SCALE = new Vector3(0.1f, 0.1f, 0.1f);
     private static readonly Vector3 DEAD_TO = new Vector3(0f, 5f, 0f);
-    
+
     //bit mask layout on jelly box surface
     // 0 1
     // 2 3
@@ -68,24 +73,24 @@ public class Jelly : MonoBehaviour, IPoolable
     [SerializeField] private JellyLayout _layout;
     [SerializeField] private int _index;
     [SerializeField] private Renderer _renderer;
+    [SerializeField] private Transform _dockerTrs;
+    private Vector3 _lastpos = Vector3.zero;
     private SimpleSpring _spring = new SimpleSpring();
-    private Vector3 _laspos = Vector3.zero;
     private MaterialPropertyBlock _materialPropertyBlock;
+    private Queue<Sequence> _queuedSequences = new Queue<Sequence>();
+    private bool _isAnySequenceDoing = false;
+    private AbsSkillInstance _skillInstance;
 
     public JellyLayout layout => _layout;
     public int index => _index;
+    public Transform dockerTrs => _dockerTrs;
 
     public static bool TryLayout(JellyLayout layout, ref int surface)
     {
-        //if (layout == JellyLayout.None)
-        //{
-        //    return false;
-        //}
-
         int newSurface = LAYOUT_SURFACE[(int)layout];
         if ((newSurface & surface) == 0)
         {
-            surface = surface | newSurface;
+            surface |= newSurface;
             return true;
         }
         else
@@ -103,14 +108,12 @@ public class Jelly : MonoBehaviour, IPoolable
 
         int leftMask = LAYOUT_SURFACE[(int)JellyLayout.Left];
         int rightMask = LAYOUT_SURFACE[(int)JellyLayout.Right];
-        int leftSurface = 0;
-        int rightSurface = 0;
-        TryLayout(leftLayout, ref leftSurface);
-        TryLayout(rightLayout, ref rightSurface);
-        leftMask = leftMask & rightSurface;
-        rightMask = rightMask & leftSurface;
+        int leftSurface = LAYOUT_SURFACE[(int)leftLayout];
+        int rightSurface = LAYOUT_SURFACE[(int)rightLayout];
+        leftMask &= rightSurface;
+        rightMask &= leftSurface;
         //convert left mask to right mask
-        leftMask = leftMask << 1;
+        leftMask <<= 1;
         return (rightMask & leftMask) != 0;
     }
 
@@ -123,24 +126,66 @@ public class Jelly : MonoBehaviour, IPoolable
 
         int topMask = LAYOUT_SURFACE[(int)JellyLayout.Top];
         int bottomMask = LAYOUT_SURFACE[(int)JellyLayout.Bottom];
-        int topSurface = 0;
-        int bottomSurface = 0;
-        TryLayout(topLayout, ref topSurface);
-        TryLayout(bottomLayout, ref bottomSurface);
-        topMask = topMask & bottomSurface;
-        bottomMask = bottomMask & topSurface;
+        int topSurface = LAYOUT_SURFACE[(int)topLayout];
+        int bottomSurface = LAYOUT_SURFACE[(int)bottomLayout];
+        topMask &= bottomSurface;
+        bottomMask &= topSurface;
         //convert top mask to bottom mask
-        topMask = topMask << 2;
+        topMask <<= 2;
         return (bottomMask & topMask) != 0;
     }
 
-    public void InitJelly(JellyLayout layout, int index)
+    public static List<int> CountJellyIndices(List<Jelly> left, List<Jelly> right, List<Jelly> top, List<Jelly> bottom)
+    {
+        int leftMask = LAYOUT_SURFACE[(int)JellyLayout.Left];
+        int rightMask = LAYOUT_SURFACE[(int)JellyLayout.Right];
+        int topMask = LAYOUT_SURFACE[(int)JellyLayout.Top];
+        int bottomMask = LAYOUT_SURFACE[(int)JellyLayout.Bottom];
+
+        List<int> result = new List<int>(10);
+        for (int i = 0; left != null && i < left.Count; i++)
+        {
+            Jelly jelly = left[i];
+            if ((LAYOUT_SURFACE[(int)jelly._layout] & rightMask) != 0 && result.IndexOf(jelly._index) < 0)
+            {
+                result.Add(jelly._index);
+            }
+        }
+        for (int i = 0; right != null && i < right.Count; i++)
+        {
+            Jelly jelly = right[i];
+            if ((LAYOUT_SURFACE[(int)jelly._layout] & leftMask) != 0 && result.IndexOf(jelly._index) < 0)
+            {
+                result.Add(jelly._index);
+            }
+        }
+        for (int i = 0; top != null && i < top.Count; i++)
+        {
+            Jelly jelly = top[i];
+            if ((LAYOUT_SURFACE[(int)jelly._layout] & bottomMask) != 0 && result.IndexOf(jelly._index) < 0)
+            {
+                result.Add(jelly._index);
+            }
+        }
+        for (int i = 0; bottom != null && i < bottom.Count; i++)
+        {
+            Jelly jelly = bottom[i];
+            if ((LAYOUT_SURFACE[(int)jelly._layout] & topMask) != 0 && result.IndexOf(jelly._index) < 0)
+            {
+                result.Add(jelly._index);
+            }
+        }
+        return result;
+    }
+
+    public void InitJelly(JellyLayout layout, int index, AbsSkillInstance skillInstance)
     {
         _layout = layout;
         _index = index;
+        _skillInstance = skillInstance;
     }
 
-    public int TryExpandLeft(int suface)
+    public int TryExpandLeft(int suface, float delay)
     {
         JellyLayout newLayout;
         JellyLayout expandLayout;
@@ -163,12 +208,12 @@ public class Jelly : MonoBehaviour, IPoolable
         }
         if (TryLayout(expandLayout, ref suface))
         {
-            DoExpand(newLayout);
+            Expand(newLayout, delay);
         }
         return suface;
     }
 
-    public int TryExpandRight(int suface)
+    public int TryExpandRight(int suface, float delay)
     {
         JellyLayout newLayout;
         JellyLayout expandLayout;
@@ -191,12 +236,12 @@ public class Jelly : MonoBehaviour, IPoolable
         }
         if (TryLayout(expandLayout, ref suface))
         {
-            DoExpand(newLayout);
+            Expand(newLayout, delay);
         }
         return suface;
     }
 
-    public int TryExpandTop(int suface)
+    public int TryExpandTop(int suface, float delay)
     {
         JellyLayout newLayout;
         JellyLayout expandLayout;
@@ -219,12 +264,12 @@ public class Jelly : MonoBehaviour, IPoolable
         }
         if (TryLayout(expandLayout, ref suface))
         {
-            DoExpand(newLayout);
+            Expand(newLayout, delay);
         }
         return suface;
     }
 
-    public int TryExpandBottom(int suface)
+    public int TryExpandBottom(int suface, float delay)
     {
         JellyLayout newLayout;
         JellyLayout expandLayout;
@@ -247,28 +292,77 @@ public class Jelly : MonoBehaviour, IPoolable
         }
         if (TryLayout(expandLayout, ref suface))
         {
-            DoExpand(newLayout);
+            Expand(newLayout, delay);
         }
         return suface;
     }
 
-    public void DoDead()
+    public void Die()
     {
-        transform.DOScale(DEAD_SCALE, GameBoardManager.JELLY_DEAD_TIME);
-        transform.DOLocalPath(new Vector3[] { DEAD_TO }, GameBoardManager.JELLY_DEAD_TIME);
-        GameBoardManager.Instance.MakeGoal(_index);
+        Sequence sequence = DOTween.Sequence().Pause()
+        .AppendInterval(GameBoardManager.JELLY_ACTION_DELAY)
+        .AppendCallback(CastSkill)
+        .Append(transform.DOScale(DEAD_SCALE, GameBoardManager.JELLY_DEAD_TIME))
+        .Join(transform.DOLocalPath(new Vector3[] { DEAD_TO }, GameBoardManager.JELLY_DEAD_TIME))
+        .AppendCallback(OnDieComplete);
+        EnqueueSequence(sequence);
     }
 
-    public void DoExpand(JellyLayout newLayout)
+    private void CastSkill()
+    {
+        _skillInstance?.Cast(this);
+    }
+
+    private void OnDieComplete()
+    {
+        _queuedSequences.Clear();
+        GameBoardManager.Instance.MakeGoal(_index);
+        Recycle();
+    }
+
+    private void EnqueueSequence(Sequence sequence)
+    {
+        sequence.OnComplete(() =>
+        {
+            _isAnySequenceDoing = false;
+            OnSequenceComplete();
+        });
+        if (!_isAnySequenceDoing)
+        {
+            _isAnySequenceDoing = true;
+            sequence.Play();
+        }
+        else
+        {
+            _queuedSequences.Enqueue(sequence);
+        }
+    }
+
+    private void OnSequenceComplete()
+    {
+        if (_queuedSequences.Count > 0)
+        {
+            _queuedSequences.Dequeue().Play();
+            _isAnySequenceDoing = true;
+        }
+    }
+
+    private void Expand(JellyLayout newLayout, float delay)
     {
         _layout = newLayout;
-        RenderJelly(GameBoardManager.JELLY_DEAD_TIME);
+        JellyFitInEffect(delay, GameBoardManager.JELLY_EXPAND_TIME);
     }
 
-    public void RenderJelly(float time)
+    public void JellyFitInEffect(float delay, float duration)
     {
-        transform.DOScale(GameBoardManager.JELLY_SCALE * LAYOUT_SCALE[(int)_layout], time);
-        transform.DOLocalPath(new Vector3[] { GameBoardManager.BOX_SIZE * LAYOUT_POS[(int)_layout] }, time);
+        Vector3 finalScale = GameBoardManager.JELLY_SCALE * LAYOUT_SCALE[(int)_layout];
+        Vector3 finalDockerScale = new Vector3(1 / finalScale.x, 1 / finalScale.y, 1 / finalScale.z);
+        Sequence sequence = DOTween.Sequence().Pause()
+        .AppendInterval(delay)
+        .Append(_dockerTrs.DOScale(finalDockerScale, duration))
+        .Join(transform.DOScale(finalScale, duration))
+        .Join(transform.DOLocalPath(new Vector3[] { GameBoardManager.BOX_SIZE * LAYOUT_POS[(int)_layout] }, duration));
+        EnqueueSequence(sequence);
     }
 
     public void Destroy()
@@ -276,12 +370,14 @@ public class Jelly : MonoBehaviour, IPoolable
         Destroy(gameObject);
     }
 
-    public void OnDisabled()
+    public void OnReturnToPool()
     {
+        _queuedSequences.Clear();
+        _isAnySequenceDoing = false;
         transform.parent = GameBoardManager.Instance.poolRoot;
     }
 
-    public void OnEnabled()
+    public void OnGetFomPool()
     {
         //throw new System.NotImplementedException();
     }
@@ -296,16 +392,16 @@ public class Jelly : MonoBehaviour, IPoolable
         _materialPropertyBlock = new MaterialPropertyBlock();
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
-        _spring.Pinch(Vector3.ClampMagnitude(_laspos - transform.position, 1));
-        Vector3 jellyMove = _spring.Simulate(1, Time.deltaTime, 10, 0.6f);
+        _spring.Pinch(Vector3.ClampMagnitude(_lastpos - transform.position, 1));
+        Vector3 jellyMove = _spring.Simulate(Time.deltaTime, 1.25f, 0.25f);
         if (jellyMove.magnitude > Vector3.kEpsilon)
         {
             _materialPropertyBlock.SetVector(AssetConst.SHADERPROP_JELLY_MOVE, jellyMove);
             _renderer.SetPropertyBlock(_materialPropertyBlock);
         }
-        _laspos = transform.position;
+        _lastpos = transform.position;
     }
 }
 
@@ -320,16 +416,17 @@ public class SimpleSpring
         _v = Vector3.zero;
     }
 
-    public Vector3 Simulate(float mass, float time, float stiffness, float loss)
+    public Vector3 Simulate(float time, float stiffness, float loss)
     {
-        _v *= (1 - loss);
-        _v -= time * stiffness / mass * _position;
+        _v *= 1 - loss;
+        _v -= time * stiffness * _position;
         _position += _v;
         return _position;
     }
 
     public void Pinch(Vector3 direction)
     {
-        _position += direction;
+        _position = Vector3.Lerp(_position, direction, 0.3f);
+        //_position += direction;
     }
 }
