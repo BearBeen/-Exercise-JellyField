@@ -1,19 +1,9 @@
-using System;
 using System.Collections.Generic;
 
 using UnityEngine;
 
 public partial class GameBoardManager : MonoSingleton<GameBoardManager>
 {
-    [Serializable]
-    private struct GameDifficulty
-    {
-        public int turnToGenerate;
-        public int boxPerGenerate;
-        public int totalIndicesCount;
-        public int minIndicesPerBox;
-    }
-
     private static readonly JellyLayout[][] _1_IDX_BOX = new JellyLayout[1][]
     {
         new JellyLayout[]{JellyLayout.Center},
@@ -46,43 +36,79 @@ public partial class GameBoardManager : MonoSingleton<GameBoardManager>
         _3_IDX_BOX,
         _4_IDX_BOX,
     };
+    
+    [SerializeField] private GameDifficultyConfig _gameDifficultyConfig;
+    private AttributeSet<GameAttribute> _gameAttributeSet;
 
-    //TODO: make a difficulty curve for it. config it out.
-    [SerializeField] private GameDifficulty _gameDifficulty;
+    private float _cubeGenCount;
+    private float _skillGenCount;
 
-    [ContextMenu("GenerateTurn")]
+    private void UpdateBoardAttribute()
+    {
+        _cubeGenCount += _gameAttributeSet.GetFloat(GameAttribute.BoxGenEachTurn) / 1000f;
+        _skillGenCount += _gameAttributeSet.GetFloat(GameAttribute.SkillCountEachTurn) / 1000f;
+        Vector2Int boardSize = _gameDifficultyConfig.GetBoardSize(_turnCount);
+        //TODO: expanding board.
+    }
+    
     private void GenerateTurn()
     {
+        int boxThisTurn = (int) _cubeGenCount;
+        _cubeGenCount -= boxThisTurn;
+        if (UnityEngine.Random.Range(0f, 1f) < _cubeGenCount)
+        {
+            _cubeGenCount = 0;
+            boxThisTurn++;
+        }
+
+        int skillThisTurn = (int)_skillGenCount;
+        _skillGenCount -= skillThisTurn;
+        if (UnityEngine.Random.Range(0f, 1f) < _skillGenCount)
+        {
+            _skillGenCount = 0;
+            skillThisTurn++;
+        }
+
         List<Vector2Int> generatableBoardIndices = new List<Vector2Int>();
         List<int>[,] nearbyIndicesCache = new List<int>[_xSize, _ySize];
+        int boardColorCount = _gameDifficultyConfig.GetBoardColor(_turnCount);
+        int minColorPerBox = _gameDifficultyConfig.GetMinColorPerBox(_turnCount);
 
         for (int x = 0; x < _xSize; x++)
         {
             for (int y = 0; y < _ySize; y++)
             {
-                if (IsIndexGeneratable(x, y, _gameDifficulty.totalIndicesCount, _gameDifficulty.minIndicesPerBox, ref nearbyIndicesCache))
+                if (IsIndexGeneratable(x, y, boardColorCount,
+                    minColorPerBox,
+                    ref nearbyIndicesCache))
                 {
                     generatableBoardIndices.Add(new Vector2Int(x, y));
                 }
             }
         }
 
-        int genMax = Mathf.Min(CountEmptyBox() - 1, _gameDifficulty.boxPerGenerate, generatableBoardIndices.Count);
+        int genMax = Mathf.Min(CountEmptyBox() - 1, boxThisTurn, generatableBoardIndices.Count);
         int genCount = 0;
         while (genMax > 0 && genCount < genMax)
         {
             Vector2Int boardIndex = generatableBoardIndices.GetRandom();
             List<int> nearbyIndices = nearbyIndicesCache[boardIndex.x, boardIndex.y];
             int indicesCount = Mathf.Min(
-                UnityEngine.Random.Range(_gameDifficulty.minIndicesPerBox, JELLY_LAYOUTS.Length),
-                _gameDifficulty.totalIndicesCount - (nearbyIndices?.Count ?? 0));
+                UnityEngine.Random.Range(minColorPerBox, JELLY_LAYOUTS.Length),
+                boardColorCount - (nearbyIndices?.Count ?? 0));
             List<int> paletteIndices = new List<int>();
-            for (int i = 0; i < _gameDifficulty.totalIndicesCount; i++)
+            for (int i = 0; i < boardColorCount; i++)
             {
                 if (nearbyIndices == null || nearbyIndices.IndexOf(i) < 0) paletteIndices.Add(i);
             }
             paletteIndices = paletteIndices.GetRandoms(indicesCount);
-            JellyBox newBox = GenerateJellyBox(JELLY_LAYOUTS[indicesCount].GetRandom(), paletteIndices, null);
+            AbsSkillInstance skillInstance = null;
+            if (skillThisTurn > 0)
+            {
+                skillThisTurn--;
+                skillInstance = SkillManager.Instance.GetRandomSkillInstance();
+            }
+            JellyBox newBox = GenerateJellyBox(JELLY_LAYOUTS[indicesCount].GetRandom(), paletteIndices, skillInstance);
             _jellyBoxes[boardIndex.x][boardIndex.y].Recycle();
             newBox.transform.parent = null;
             newBox.transform.position = BoardIndexToPosition(boardIndex.x, boardIndex.y);
@@ -95,28 +121,28 @@ public partial class GameBoardManager : MonoSingleton<GameBoardManager>
             left.x--; right.x++; top.y++; bottom.y--;
             int indexInGeneratable;
             if ((indexInGeneratable = generatableBoardIndices.IndexOf(left)) >= 0 &&
-                !IsIndexGeneratable(left.x, left.y, _gameDifficulty.totalIndicesCount, _gameDifficulty.minIndicesPerBox, ref nearbyIndicesCache))
+                !IsIndexGeneratable(left.x, left.y, boardColorCount, minColorPerBox, ref nearbyIndicesCache))
             {
                 generatableBoardIndices.RemoveAt(indexInGeneratable);
             }
             if ((indexInGeneratable = generatableBoardIndices.IndexOf(right)) >= 0 &&
-                !IsIndexGeneratable(right.x, right.y, _gameDifficulty.totalIndicesCount, _gameDifficulty.minIndicesPerBox, ref nearbyIndicesCache))
+                !IsIndexGeneratable(right.x, right.y, boardColorCount, minColorPerBox, ref nearbyIndicesCache))
             {
                 generatableBoardIndices.RemoveAt(indexInGeneratable);
             }
             if ((indexInGeneratable = generatableBoardIndices.IndexOf(top)) >= 0 &&
-                !IsIndexGeneratable(top.x, top.y, _gameDifficulty.totalIndicesCount, _gameDifficulty.minIndicesPerBox, ref nearbyIndicesCache))
+                !IsIndexGeneratable(top.x, top.y, boardColorCount, minColorPerBox, ref nearbyIndicesCache))
             {
                 generatableBoardIndices.RemoveAt(indexInGeneratable);
             }
             if ((indexInGeneratable = generatableBoardIndices.IndexOf(bottom)) >= 0 &&
-                !IsIndexGeneratable(bottom.x, bottom.y, _gameDifficulty.totalIndicesCount, _gameDifficulty.minIndicesPerBox, ref nearbyIndicesCache))
+                !IsIndexGeneratable(bottom.x, bottom.y, boardColorCount, minColorPerBox, ref nearbyIndicesCache))
             {
                 generatableBoardIndices.RemoveAt(indexInGeneratable);
             }
             
             genCount++;
-            genMax = Mathf.Min(CountEmptyBox() - 1, _gameDifficulty.boxPerGenerate, generatableBoardIndices.Count);
+            genMax = Mathf.Min(CountEmptyBox() - 1, boxThisTurn, generatableBoardIndices.Count);
         }
 
         bool IsIndexGeneratable(int x, int y, int maxIndicesCount, int requireIndicesCount, ref List<int>[,] nearbyIndicesCache)
@@ -144,6 +170,7 @@ public partial class GameBoardManager : MonoSingleton<GameBoardManager>
         JellyBox newBox = _jellyBoxPool.Get();
         List<Jelly> jellies = new List<Jelly>();
         int jellyIndexGotSkill = -1;
+        int boardColorCount = _gameDifficultyConfig.GetBoardColor(_turnCount);
         if (skillInstance != null)
         {
             jellyIndexGotSkill = UnityEngine.Random.Range(0, jellyLayouts.Length);
@@ -151,10 +178,28 @@ public partial class GameBoardManager : MonoSingleton<GameBoardManager>
         for (int i = 0; i < jellyLayouts.Length; i++)
         {
             Jelly newJelly = _jellyPools[paletteIndices[i]].Get();
-            newJelly.InitJelly(jellyLayouts[i], paletteIndices[i], i == jellyIndexGotSkill ? skillInstance : null);
+            if (i == jellyIndexGotSkill)
+            {
+                newJelly.InitJelly(jellyLayouts[i], paletteIndices[i], skillInstance);
+                skillInstance.Init(newJelly, UnityEngine.Random.Range(0, boardColorCount));
+            }
+            else
+            {
+                newJelly.InitJelly(jellyLayouts[i], paletteIndices[i], null);
+            }
             jellies.Add(newJelly);
         }
         newBox.InitJellies(jellies);
         return newBox;
+    }
+
+    public void UpgradeGameAttribute(AttributeInstance<GameAttribute> attributeInstance)
+    {
+        _gameAttributeSet.Add(attributeInstance, false);
+    }
+
+    public void UpgradeGameAttribute(GameAttribute attribute, int value)
+    {
+        _gameAttributeSet.Add(attribute, value);
     }
 }

@@ -22,19 +22,19 @@ public class SkillManager : MonoSingleton<SkillManager>
         public Func<bool> IsExcuteCompleted;
     }
 
-    [SerializeField] private List<AbsSkillData> _skillDatas = new List<AbsSkillData>();
-    [SerializeReference, SubclassSelector] private List<IUpgrade> _upgrades = new List<IUpgrade>();
+    [SerializeField] private List<AbsSkillData> _originalSkillDatas = new List<AbsSkillData>();
     private Dictionary<Type, AbsSkillData> _skillDataDic = new Dictionary<Type, AbsSkillData>();
+    private List<AbsSkillData> _skillDatas = new List<AbsSkillData>();
 
     public override void Init()
     {
         base.Init();
         _skillDataDic.Clear();
-        for (int i = 0, length = _skillDatas.Count; i < length; i++)
+        for (int i = 0, length = _originalSkillDatas.Count; i < length; i++)
         {
-            AbsSkillData clone = Instantiate(_skillDatas[i]);
-            clone.Upgrade(_upgrades);
+            AbsSkillData clone = Instantiate(_originalSkillDatas[i]);
             _skillDataDic.Add(_skillDatas[i].GetType(), clone);
+            _skillDatas.Add(clone);
         }
     }
 
@@ -53,7 +53,12 @@ public class SkillManager : MonoSingleton<SkillManager>
         }
     }
 
-    private List<SkillExcuteData> _skillExcuteDatas = new();
+    public AbsSkillInstance GetRandomSkillInstance()
+    {
+        return _skillDatas.GetRandom().CreateSkillInstance();
+    }
+
+    private List<SkillExcuteData> _skillExcuteDatas = new List<SkillExcuteData>();
 
     private void Update()
     {

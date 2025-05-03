@@ -8,9 +8,9 @@ public struct RangeAddUpgrade: IRangeUpgrade
 
     public int priority => 0;
 
-    public UpgradeType upgradeType => UpgradeType.RangeUpgrade;
+    public SkillUpgradeType upgradeType => SkillUpgradeType.RangeUpgrade;
 
-    public UpgradeType[] upgradeTypes => null;
+    public SkillUpgradeType[] upgradeTypes => null;
 
     public int UpgradeRange(int range)
     {

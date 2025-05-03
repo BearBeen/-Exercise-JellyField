@@ -29,7 +29,8 @@ public partial class GameBoardManager : MonoSingleton<GameBoardManager>
 
     private JellyBox[][] _jellyBoxes;
     private int _levelIndex = 0;
-    private int _turnIndex = 0;
+    //private int _turnIndex = 0;
+    private int _turnCount = 0;
     private Pool<JellyBox> _jellyBoxPool;
     private Dictionary<int, Pool<Jelly>> _jellyPools;
     private int _xSize;
@@ -129,6 +130,7 @@ public partial class GameBoardManager : MonoSingleton<GameBoardManager>
             newBox.transform.position = BoardIndexToPosition(x, y);
             _jellyBoxes[x][y] = newBox;
             newBox.name = x + "_" + y;
+            _turnCount++;
             RefillDragger(index);
             _changeBoxes.Add(new Vector2Int(x, y));
             if (x > 0 && _jellyBoxes[x - 1][y] != null && _jellyBoxes[x - 1][y].jellyCount > 0)
@@ -210,6 +212,9 @@ public partial class GameBoardManager : MonoSingleton<GameBoardManager>
             Jelly prototype = levelConfig.Palette[i];
             _jellyPools[i] = new Pool<Jelly>(() => Instantiate(prototype.gameObject).GetComponent<Jelly>());
         }
+        //init game difficulty
+        _gameAttributeSet = new AttributeSet<GameAttribute>();
+        _gameAttributeSet.Add(_gameDifficultyConfig.baseAttrs);
         //init game board
         JellyBox newBox;
         _jellyBoxes = new JellyBox[levelConfig.XSize][];
@@ -230,7 +235,8 @@ public partial class GameBoardManager : MonoSingleton<GameBoardManager>
             }
         }
         //refill dragger
-        _turnIndex = 0;
+        //_turnIndex = 0;
+        _turnCount = 0;
         _boxDraggers[0].Clear();
         _boxDraggers[1].Clear();
         RefillDragger(0);
@@ -284,11 +290,17 @@ public partial class GameBoardManager : MonoSingleton<GameBoardManager>
 
     private void RefillDragger(int index)
     {
-        LevelConfig levelConfig = _levels[_levelIndex];
-        JellyBox newBox = _jellyBoxPool.Get();
-        newBox.InitJellies(CreateJelliesFromBox(levelConfig.Turns[_turnIndex]));
+        int boardColorCount = _gameDifficultyConfig.GetBoardColor(_turnCount);
+        int minColorPerBox = _gameDifficultyConfig.GetMinColorPerBox(_turnCount);
+        int indicesCount = UnityEngine.Random.Range(minColorPerBox, JELLY_LAYOUTS.Length);
+        List<int> paletteIndices = new List<int>();
+        for (int i = 0, length = boardColorCount; i < length; i++)
+        {
+            paletteIndices.Add(i);
+        }
+        paletteIndices = paletteIndices.GetRandoms(indicesCount);
+        JellyBox newBox = GenerateJellyBox(JELLY_LAYOUTS[indicesCount].GetRandom(), paletteIndices, null);
         _boxDraggers[index].Refill(newBox);
-        _turnIndex = (_turnIndex + 1) % levelConfig.Turns.Count;
     }
 
     private void CheckChange()

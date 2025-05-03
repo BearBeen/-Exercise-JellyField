@@ -4,7 +4,7 @@ using UnityEngine;
 public abstract class AbsSkillData : ScriptableObject
 {
     public abstract AbsSkillInstance CreateSkillInstance();
-    public abstract void Upgrade(List<IUpgrade> upgrades);
+    public abstract void Upgrade(List<ISkillUpgrade> upgrades);
 }
 
 public abstract class AbsSkillInstance
@@ -37,12 +37,12 @@ public abstract class AbsSkillData<T1, T2> : AbsSkillData
 {
     public override AbsSkillInstance CreateSkillInstance()
     {
-        T2 result = new();
+        T2 result = new T2();
         result.SetData(this as T1);
         return result;
     }
 
-    public override void Upgrade(List<IUpgrade> upgrades)
+    public override void Upgrade(List<ISkillUpgrade> upgrades)
     {
         upgrades.Sort((a, b) =>
         {
@@ -50,16 +50,16 @@ public abstract class AbsSkillData<T1, T2> : AbsSkillData
         });
         for (int i = 0; i < upgrades.Count; i++)
         {
-            IUpgrade upgrade = upgrades[i];
+            ISkillUpgrade upgrade = upgrades[i];
             switch (upgrade.upgradeType)
             {
-                case UpgradeType.ComposeUpgrade:
+                case SkillUpgradeType.ComposeUpgrade:
                     CompositeUpgrade(upgrade);
                     break;
-                case UpgradeType.RangeUpgrade:
+                case SkillUpgradeType.RangeUpgrade:
                     UpgradeRange(upgrade as IRangeUpgrade);
                     break;
-                case UpgradeType.TargetJellyIndexUpgrade:
+                case SkillUpgradeType.TargetJellyIndexUpgrade:
                     UpgradeTargetJellyIndex(upgrade as ITargetJellyIndexUpgrade);
                     break;
                 default:
@@ -79,19 +79,19 @@ public abstract class AbsSkillData<T1, T2> : AbsSkillData
         DebugManager.Instance.LogError($"{this.GetType()} not implement UpgradeTargetJellyIndex. Wrongly config?");
     }
 
-    private void CompositeUpgrade(IUpgrade upgrade)
+    private void CompositeUpgrade(ISkillUpgrade upgrade)
     {
         for (int i = 0; upgrade.upgradeTypes != null && i < upgrade.upgradeTypes.Length; i++)
         {
             switch (upgrade.upgradeTypes[i])
             {
-                case UpgradeType.ComposeUpgrade:
+                case SkillUpgradeType.ComposeUpgrade:
                     DebugManager.Instance.LogError("Wrongly configured. Unknown intend as nested ComposeUpgrade will lead to infinite loop.");
                     break;
-                case UpgradeType.RangeUpgrade:
+                case SkillUpgradeType.RangeUpgrade:
                     UpgradeRange(upgrade as IRangeUpgrade);
                     break;
-                case UpgradeType.TargetJellyIndexUpgrade:
+                case SkillUpgradeType.TargetJellyIndexUpgrade:
                     UpgradeTargetJellyIndex(upgrade as ITargetJellyIndexUpgrade);
                     break;
                 default:
