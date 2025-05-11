@@ -12,5 +12,43 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e495a4a47b38bec4b8a469110cdd458a, type: 3}
   m_Name: BombSkillData
   m_EditorClassIdentifier: 
+  _isUnlocked: 0
+  _upgrades:
+  - rid: 760966763245207561
+  - rid: 760966763245207562
+  - rid: 760966763245207563
   _bombPath: Assets/GameResource/SkillEffect/Bomb.prefab
   _explosionRadius: 3
+  references:
+    version: 2
+    RefIds:
+    - rid: 760966763245207561
+      type: {class: RangeUpgrade, ns: , asm: Assembly-CSharp}
+      data:
+        _possibility: 50
+        _negAttr: 2
+        _priceMin: 3.5
+        _priceMax: 7
+        _add: 1
+        _per: 0
+        _rangeMax: 8
+    - rid: 760966763245207562
+      type: {class: RangeUpgrade, ns: , asm: Assembly-CSharp}
+      data:
+        _possibility: 20
+        _negAttr: 2
+        _priceMin: 5.5
+        _priceMax: 11
+        _add: 2
+        _per: 0
+        _rangeMax: 8
+    - rid: 760966763245207563
+      type: {class: AllColorButReduceRangeUpgrade, ns: , asm: Assembly-CSharp}
+      data:
+        _possibility: 5
+        _negAttr: 2
+        _priceMin: 10
+        _priceMax: 20
+        _add: 0
+        _per: -0.7
+        _rangeMax: 8

@@ -4,6 +4,7 @@ using UnityEngine;
 
 public partial class GameBoardManager : MonoSingleton<GameBoardManager>
 {
+    public const float GAME_ATTR_BASE_RATE = 1000f;
     private static readonly JellyLayout[][] _1_IDX_BOX = new JellyLayout[1][]
     {
         new JellyLayout[]{JellyLayout.Center},
@@ -45,8 +46,8 @@ public partial class GameBoardManager : MonoSingleton<GameBoardManager>
 
     private void UpdateBoardAttribute()
     {
-        _cubeGenCount += _gameAttributeSet.GetFloat(GameAttribute.BoxGenEachTurn) / 1000f;
-        _skillGenCount += _gameAttributeSet.GetFloat(GameAttribute.SkillCountEachTurn) / 1000f;
+        _cubeGenCount += _gameAttributeSet.GetFloat(GameAttribute.BoxGenEachTurn) / GAME_ATTR_BASE_RATE;
+        _skillGenCount += _gameAttributeSet.GetFloat(GameAttribute.SkillCountEachTurn) / GAME_ATTR_BASE_RATE;
         Vector2Int boardSize = _gameDifficultyConfig.GetBoardSize(_turnCount);
         //TODO: expanding board.
     }

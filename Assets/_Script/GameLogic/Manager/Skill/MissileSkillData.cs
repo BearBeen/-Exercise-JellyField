@@ -14,14 +14,39 @@ public class MissileSkillData : AbsSkillData<MissileSkillData, MissileSkillInsta
     [SerializeField] private float _missileSpeedStartTurn;
     [SerializeField] private int _shootCount;
 
+    private float _missileAdd;
+    private float _missilePer;
+
+    public override int skillID => (int)SkillID.Missile;
     public string missileTemplatePath => _missileTemplatePath;
-    public ParticleSystem exploseEffect => _exploseEffect; 
+    public ParticleSystem exploseEffect => _exploseEffect;
     public float missileMaxSpeed => _missileMaxSpeed;
     public float missileAccelerate => _missileAccelerate;
     public float missileMaxTurnSpeed => _missileMaxTurnSpeed;
     public float missileTurnAccelerate => _missileTurnAccelerate;
     public float missileSpeedStartTurn => _missileSpeedStartTurn;
-    public int shootCount => _shootCount;
+    public int shootCount => (int)((_shootCount + _missileAdd) * (_missilePer + 1));
+
+    protected override bool InternalIsUpgradable(SkillUpgradeType skillUpgradeType, ISkillUpgrade skillUpgrade)
+    {
+        switch (skillUpgradeType)
+        {
+            case SkillUpgradeType.MissileCountUpgrade:
+                return IsMissileCountUpgradable(shootCount, skillUpgrade);
+            default:
+                return false;
+        }
+    }
+
+    protected override void InternalUpgrade(SkillUpgradeType skillUpgradeType, ISkillUpgrade skillUpgrade)
+    {
+        switch (skillUpgradeType)
+        {
+            case SkillUpgradeType.MissileCountUpgrade:
+                UpgradeMissileCount(skillUpgrade as IMissileCountUpgrade, ref _missilePer, ref _missileAdd);
+                break;
+        }
+    }
 }
 
 public class MissileSkillInstance : AbsSkillInstance<MissileSkillData, MissileSkillInstance>

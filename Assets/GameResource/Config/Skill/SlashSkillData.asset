@@ -12,7 +12,45 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d64cd085cfad1c1458374a2b0505df36, type: 3}
   m_Name: SlashSkillData
   m_EditorClassIdentifier: 
+  _isUnlocked: 0
+  _upgrades:
+  - rid: 760966763245207564
+  - rid: 760966763245207565
+  - rid: 760966763245207566
   _swordPath: Assets/GameResource/SkillEffect/Sword.prefab
   _slashEffect: {fileID: 0}
   _slashLength: 3
   _slashSpeed: 4.5
+  references:
+    version: 2
+    RefIds:
+    - rid: 760966763245207564
+      type: {class: RangeUpgrade, ns: , asm: Assembly-CSharp}
+      data:
+        _possibility: 100
+        _negAttr: 2
+        _priceMin: 1.2
+        _priceMax: 4.8
+        _add: 1
+        _per: 0
+        _rangeMax: 999
+    - rid: 760966763245207565
+      type: {class: RangeUpgrade, ns: , asm: Assembly-CSharp}
+      data:
+        _possibility: 30
+        _negAttr: 2
+        _priceMin: 2.5
+        _priceMax: 10
+        _add: 3
+        _per: 0
+        _rangeMax: 999
+    - rid: 760966763245207566
+      type: {class: AllColorButReduceRangeUpgrade, ns: , asm: Assembly-CSharp}
+      data:
+        _possibility: 10
+        _negAttr: 2
+        _priceMin: 10
+        _priceMax: 20
+        _add: 0
+        _per: -0.8
+        _rangeMax: 10

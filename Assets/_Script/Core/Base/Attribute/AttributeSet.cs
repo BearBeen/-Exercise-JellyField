@@ -11,8 +11,8 @@ public class AttributeSet<T> where T : unmanaged, Enum
         get
         {
             int key = attribute.ToInt();
-            if (key > (int)Attribute.PER_REGION) key -= (int)Attribute.PER_REGION;
-            else if (key > (int)Attribute.ADD_REGION) key -= (int)Attribute.ADD_REGION;
+            if (key > (int)Attribute.ADD_REGION) key -= (int)Attribute.ADD_REGION;
+            else if (key > (int)Attribute.PER_REGION) key -= (int)Attribute.PER_REGION;
             if (_attributeDict.TryGetValue(key, out AttributeInstance<T> attributeInstance))
             {
                 return attributeInstance;
@@ -36,8 +36,8 @@ public class AttributeSet<T> where T : unmanaged, Enum
     public void Add(T attribute, int value)
     {
         int key = attribute.ToInt();
-        if (key > (int)Attribute.PER_REGION) key -= (int)Attribute.PER_REGION;
-        else if (key > (int)Attribute.ADD_REGION) key -= (int)Attribute.ADD_REGION;
+        if (key > (int)Attribute.ADD_REGION) key -= (int)Attribute.ADD_REGION;
+        else if (key > (int)Attribute.PER_REGION) key -= (int)Attribute.PER_REGION;
         if (_attributeDict.TryGetValue(key, out AttributeInstance<T> myAttributeInstance))
         {
             myAttributeInstance.Change(attribute, value);
@@ -53,12 +53,9 @@ public class AttributeSet<T> where T : unmanaged, Enum
                 myAttributeInstance = new AttributeInstance<T>(attributeInstance);
                 _attributeDict[myAttributeInstance.attribute.ToInt()] = myAttributeInstance;
             }
-            else
-            {
-                return;
-            }
+            return;
         }
-        _attributeDict[attributeInstance.attribute.ToInt()] += attributeInstance;
+        myAttributeInstance.Change(attributeInstance);
     }
 
     public void Add(AttributeSet<T> attributeSet, bool isAcceptNew = true)

@@ -53,6 +53,14 @@ public class AttributeInstance<T> where T: unmanaged, Enum
         _isValueChanged = true;
     }
 
+    public static string GetValueString(T attribute, float value)
+    {
+        int key = attribute.ToInt();
+        if (key > (int)Attribute.ADD_REGION) return value.ToString("0.00");
+        if (key > (int)Attribute.PER_REGION) return (value / PER_BASE).ToString("0.00x");
+        return value.ToString("0.00");
+    }
+
     private void CalFinal()
     {
         _isValueChanged = false;
@@ -61,25 +69,34 @@ public class AttributeInstance<T> where T: unmanaged, Enum
 
     public void Change(T attribute, int change)
     {
-
-        if (_attribute.ToInt() + (int)Attribute.PER_REGION == attribute.ToInt())
+        int myKey = _attribute.ToInt();
+        int changeKey = attribute.ToInt();
+        if (myKey + (int)Attribute.PER_REGION == changeKey)
         {
             _isValueChanged = true;
             _perValue += change;
             return;
         }
-        if (_attribute.ToInt() + (int)Attribute.ADD_REGION == attribute.ToInt())
+        if (myKey + (int)Attribute.ADD_REGION == changeKey)
         {
             _isValueChanged = true;
             _addValue += change;
             return;
         }
-        if (_attribute.ToInt() == attribute.ToInt())
+        if (myKey == changeKey)
         {
-            //not allowed. Create a new instance instead.
-            DebugManager.Instance.LogError("Can not change base Attribute");
+            _isValueChanged = true;
+            _baseValue += change;
             return;
         }
+    }
+
+    public void Change(AttributeInstance<T> change)
+    {
+        _isValueChanged = true;
+        _perValue += change._perValue;
+        _addValue += change._addValue;
+        _baseValue += change._addValue;
     }
 
     public static AttributeInstance<T> operator + (AttributeInstance<T> left, AttributeInstance<T> right)

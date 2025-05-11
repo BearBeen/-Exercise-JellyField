@@ -1,15 +1,18 @@
 using System.Collections;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class UpgradePanelUI : AbsPanel
 {
+    [SerializeField] private UpgradeCardUI _cardTemplate;
+    [SerializeField] private Transform _activatedTrs;
+    [SerializeField] private Transform _reservedTrs;
+
+    private List<UpgradeCardUI> _activatedCards = new List<UpgradeCardUI>();
+    private List<UpgradeCardUI> _resevedCards = new List<UpgradeCardUI>();
+
     protected override void Init()
     {
-
-
         GameEventManager<UpgradeEventBinder, UpgradeEvent, UpgradeEventData>.AddEventListener(UpgradeEvent.ShowUpgradePanelUI, OnEventShowUpgradePanelUI);
     }
 
@@ -20,34 +23,54 @@ public class UpgradePanelUI : AbsPanel
 
     private void OnEventShowUpgradePanelUI(UpgradeEventData upgradeEventData)
     {
-        this.Show();
+        while(upgradeEventData.upgradeCardDatas.Count != _activatedCards.Count)
+        {
+            if (upgradeEventData.upgradeCardDatas.Count > _activatedCards.Count)
+            {
+                GetCardUI();
+            }
+            else
+            {
+                ReserveCardUI(_activatedCards[_activatedCards.Count - 1]);
+            }
+        }
+
+        for(int i = 0; i < _activatedCards.Count; i++)
+        {
+            UpgradeCardUI upgradeCardUI = _activatedCards[i];
+            upgradeCardUI.Clear();
+            upgradeCardUI.SetupOnUpgrade(OnUpgradeSelect);
+            upgradeEventData.upgradeCardDatas[i].DrawCardUI(_activatedCards[i]);
+        }
+        
+        Show();
     }
-}
 
-public class UpgradeCardUI:MonoBehaviour
-{
-    [SerializeField] Image _cardIcon;
-    [SerializeField] Image _theme;
-    [SerializeField] TextMeshProUGUI _positiveEffect;
-    [SerializeField] TextMeshProUGUI _negativeEffect;
-    [SerializeField] TextMeshProUGUI _des;
-
-    public void SetupImage(Sprite cardIcon, Sprite theme)
+    private void OnUpgradeSelect()
     {
-        _cardIcon.sprite = cardIcon ?? _cardIcon.sprite;
-        _theme.sprite = theme ?? _theme.sprite;
+        Hide();
     }
 
-    public void SetupColor(Color? cardColor, Color? themeColor)
+    private void GetCardUI()
     {
-        _cardIcon.color = cardColor ?? _cardIcon.color;
-        _theme.color = themeColor ?? _theme.color;
+        UpgradeCardUI upgradeCardUI;
+        if (_resevedCards.Count > 0)
+        {
+            upgradeCardUI = _resevedCards[_resevedCards.Count -1];
+            _resevedCards.RemoveAt(_resevedCards.Count -1);
+            upgradeCardUI.transform.SetParent(_activatedTrs, true);
+        }
+        else
+        {
+            upgradeCardUI = Instantiate(_cardTemplate, _activatedTrs);
+        }
+        _activatedCards.Add(upgradeCardUI);
     }
 
-    public void SetupText(string pos, string neg, string des)
+    private void ReserveCardUI(UpgradeCardUI upgradeCardUI)
     {
-        _positiveEffect.SetText(pos);
-        _negativeEffect.SetText(neg);
-        _des.SetText(des);
+        _activatedCards.Remove(upgradeCardUI);
+        upgradeCardUI.transform.SetParent(_reservedTrs, false);
+        _resevedCards.Add(upgradeCardUI);
     }
 }

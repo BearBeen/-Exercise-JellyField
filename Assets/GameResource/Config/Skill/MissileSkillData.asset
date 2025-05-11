@@ -12,6 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f03eb9ad29decc478c7cb7bffa229df, type: 3}
   m_Name: MissileSkillData
   m_EditorClassIdentifier: 
+  _isUnlocked: 0
+  _upgrades:
+  - rid: 760966763245207557
+  - rid: 760966763245207558
+  - rid: 760966763245207559
+  - rid: 760966763245207560
   _missileTemplatePath: Assets/GameResource/SkillEffect/FireworkMissile.prefab
   _exploseEffect: {fileID: 0}
   _missileMaxSpeed: 35
@@ -20,3 +26,46 @@ MonoBehaviour:
   _missileTurnAccelerate: 2.15
   _missileSpeedStartTurn: 6.8
   _shootCount: 1
+  references:
+    version: 2
+    RefIds:
+    - rid: 760966763245207557
+      type: {class: MissileCountUpgrade, ns: , asm: Assembly-CSharp}
+      data:
+        _possibility: 100
+        _negAttr: 2
+        _priceMin: 0.6
+        _priceMax: 1.2
+        _add: 1
+        _per: 0
+        _missileMax: 999
+    - rid: 760966763245207558
+      type: {class: MissileCountUpgrade, ns: , asm: Assembly-CSharp}
+      data:
+        _possibility: 30
+        _negAttr: 2
+        _priceMin: 1
+        _priceMax: 2
+        _add: 2
+        _per: 0
+        _missileMax: 999
+    - rid: 760966763245207559
+      type: {class: MissileCountUpgrade, ns: , asm: Assembly-CSharp}
+      data:
+        _possibility: 15
+        _negAttr: 2
+        _priceMin: 2.4
+        _priceMax: 4.8
+        _add: 5
+        _per: 0
+        _missileMax: 999
+    - rid: 760966763245207560
+      type: {class: MissileCountUpgrade, ns: , asm: Assembly-CSharp}
+      data:
+        _possibility: 7
+        _negAttr: 10002
+        _priceMin: 2500
+        _priceMax: 5000
+        _add: 0
+        _per: 2
+        _missileMax: 10

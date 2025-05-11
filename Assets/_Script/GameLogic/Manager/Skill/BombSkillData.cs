@@ -5,20 +5,40 @@ public class BombSkillData : AbsSkillData<BombSkillData, BombSkillInstance>
 {
     [SerializeField, AssetPath(typeof(GameObject))] private string _bombPath;
     [SerializeField] private int _explosionRadius;
-    [SerializeField] private bool _isKillAllColor = false;
 
+    private float _rangePer;
+    private float _rangeAdd;
+    private bool _isKillAllColor = false;
+
+    public override int skillID => (int)SkillID.Bomb;
     public string bombPath => _bombPath;
-    public int explosionRadius => _explosionRadius;
+    public int explosionRadius => (int)((_explosionRadius + _rangeAdd) * (_rangePer + 1));
     public bool isKillAllColor => _isKillAllColor;
 
-    protected override void UpgradeRange(IRangeUpgrade rangeUpgrade)
+    protected override bool InternalIsUpgradable(SkillUpgradeType skillUpgradeType, ISkillUpgrade skillUpgrade)
     {
-        _explosionRadius = rangeUpgrade.UpgradeRange(_explosionRadius);
+        switch (skillUpgradeType)
+        {
+            case SkillUpgradeType.RangeUpgrade:
+                return IsRangeUpgradable(explosionRadius, skillUpgrade);
+            case SkillUpgradeType.TargetJellyIndexUpgrade:
+                return IsJellyIndexUpgradable(isKillAllColor, skillUpgrade);
+            default:
+                return false;
+        }
     }
 
-    protected override void UpgradeTargetJellyIndex(ITargetJellyIndexUpgrade targetJellyIndexUpgrade)
+    protected override void InternalUpgrade(SkillUpgradeType skillUpgradeType, ISkillUpgrade skillUpgrade)
     {
-        _isKillAllColor = true;
+        switch (skillUpgradeType)
+        {
+            case SkillUpgradeType.RangeUpgrade:
+                UpgradeRange(skillUpgrade as IRangeUpgrade, ref _rangePer, ref _rangeAdd);
+                break;
+            case SkillUpgradeType.TargetJellyIndexUpgrade:
+                UpgradeTargetJellyIndex(skillUpgrade as ITargetJellyIndexUpgrade, ref _isKillAllColor);
+                break;
+        }
     }
 }
 

@@ -8,9 +8,41 @@ public class SlashSkillData : AbsSkillData<SlashSkillData, SlashSkillInstance>
     [SerializeField] private int _slashLength;
     [SerializeField] private float _slashSpeed;
 
+    private float _rangePer;
+    private float _rangeAdd;
+    private bool _isKillAllColor = false;
+
+    public override int skillID => (int)SkillID.Slash;
     public string swordPath => _swordPath;
-    public int slashLength => _slashLength;
+    public int slashLength => (int)((_slashLength + _rangeAdd) * (_rangePer + 1));
     public float slashSpeed => _slashSpeed;
+    public bool isKillAllColor => _isKillAllColor;
+
+    protected override bool InternalIsUpgradable(SkillUpgradeType skillUpgradeType, ISkillUpgrade skillUpgrade)
+    {
+        switch (skillUpgradeType)
+        {
+            case SkillUpgradeType.RangeUpgrade:
+                return IsRangeUpgradable(slashLength, skillUpgrade);
+            case SkillUpgradeType.TargetJellyIndexUpgrade:
+                return IsJellyIndexUpgradable(isKillAllColor, skillUpgrade);
+            default:
+                return false;
+        }
+    }
+
+    protected override void InternalUpgrade(SkillUpgradeType skillUpgradeType, ISkillUpgrade skillUpgrade)
+    {
+        switch (skillUpgradeType)
+        {
+            case SkillUpgradeType.RangeUpgrade:
+                UpgradeRange(skillUpgrade as IRangeUpgrade, ref _rangePer, ref _rangeAdd);
+                break;
+            case SkillUpgradeType.TargetJellyIndexUpgrade:
+                UpgradeTargetJellyIndex(skillUpgrade as ITargetJellyIndexUpgrade, ref _isKillAllColor);
+                break;
+        }
+    }
 }
 
 public class SlashSkillInstance : AbsSkillInstance<SlashSkillData, SlashSkillInstance>
@@ -33,7 +65,7 @@ public class SlashSkillInstance : AbsSkillInstance<SlashSkillData, SlashSkillIns
 
     public override void Init(Jelly caster, int targetJellyIndex)
     {
-        _targetJellyIndex = targetJellyIndex;
+        _targetJellyIndex = _skillData.isKillAllColor ? -1 : targetJellyIndex;
         _slashDir = SLASH_DIRS.GetRandom();
         _sword = ResourceManager.Instance.GetGameObjectAsync<PoolableAnimatedObject>(_skillData.swordPath);
         _sword.AddLoadCallback((obj) =>
